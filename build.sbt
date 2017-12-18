@@ -10,5 +10,7 @@ lazy val root = (project in file(".")).
     name := "Minesweeper",
     libraryDependencies += scalaTest % Test,
     libraryDependencies ++= akkaLibraries,
-    libraryDependencies ++= logging
+    libraryDependencies ++= logging,
+
+    // testOptions in Test += Tests.Argument("-l", "org.scalatest.tags.Slow")
   )
