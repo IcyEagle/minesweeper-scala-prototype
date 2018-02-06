@@ -99,25 +99,41 @@ trait AmfUtilities {
   }
 }
 
+object AmfAdapter extends AmfUtilities {
+
+  def apply(): AmfAdapter = {
+    val inputs: List[(Class[_], String, ByteBuffer => Command)] = List(
+      (classOf[IosAuth], "A", (data: ByteBuffer) => {
+        val playerId = readString(data)
+        val publicKeyUrl = readString(data)
+        val timestamp = readString(data).toLong
+        val salt64 = readString(data)
+        val signature64 = readString(data)
+        val bundleId = readString(data)
+        IosAuth(playerId, publicKeyUrl, timestamp, salt64, signature64, bundleId)
+      })
+    )
+
+    val outputs: List[(Class[_], String, Command => ByteString)] = List(
+      (IosAuthFailedResponse.getClass, "B", (_: Command) => {
+        val buffer = ByteBuffer.allocate(100)
+        buffer.put(0.toByte)
+        buffer.position(0)
+
+        ByteString(buffer)
+      })
+    )
+
+    new AmfAdapter(inputs, outputs)
+  }
+}
+
 class AmfAdapter(inputs: List[(Class[_], String, ByteBuffer => Command)], outputs: List[(Class[_], String, Command => ByteString)]) extends Adapter with AmfUtilities {
 
   private val encoders: Map[Class[_], Command => ByteString] = outputs.map((tuple) => {tuple._1 -> tuple._3}).toMap
   private val decoders: Map[String, ByteBuffer => Command] = inputs.map((tuple) => {tuple._2 -> tuple._3}).toMap
   private val names: Map[Class[_], String] = outputs.map((tuple) => {tuple._1 -> tuple._2}).toMap
   private val commandClasses: Map[String, Class[_]] = inputs.map((tuple) => {tuple._2 -> tuple._1}).toMap
-
-//  private def readHeader(data: ByteBuffer): Unit = {
-//    val objectType = data.getChar()
-//    if (objectType != 0xA) throw BadCommandFormat(objectType + data.toString)
-//
-//    val flags = data.getChar()
-//    if (flags != 0x7) throw BadCommandFormat(objectType + flags + data.toString)
-//  }
-
-//  private def writeHeader(data: ByteBuffer) = {
-//    data.put(0xA.toByte) // Object/Class is described ahead
-//    data.put(0x7.toByte) // AMF specific byte (not a reference, typed class, IExternalizable)
-//  }
 
   override def decode(data: ByteString): Command = {
     val buffer = data.toByteBuffer

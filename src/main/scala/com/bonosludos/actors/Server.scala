@@ -4,6 +4,7 @@ import java.net.InetSocketAddress
 
 import akka.actor.{Actor, Props}
 import akka.io.{IO, Tcp}
+import com.bonosludos.AmfAdapter
 import com.bonosludos.Event.{ConnectionEstablished, ConnectionServerFailed, ConnectionServerStarted}
 
 object Server {
@@ -29,7 +30,8 @@ class Server(host: String, port: Int) extends Actor with ActorCustomLogging {
 
     case c @ Connected(_, _) =>
       debug(ConnectionEstablished)
-      val handler = context.actorOf(ConnectionHandler.props())
+      val adapter = AmfAdapter()
+      val handler = context.actorOf(ConnectionHandler.props(adapter))
       sender() ! Register(handler)
   }
 }
